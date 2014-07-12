@@ -82,7 +82,7 @@ public:
         name_{std::move(name)},
         description_{std::move(desc)}
   {
-    if (parent_)
+    if (! is_root())
     {
       completer_->add_completion(absolute_name() + ' ');
     }
@@ -135,9 +135,8 @@ public:
   /// @returns A space-separted command sequence.
   std::string absolute_name() const
   {
-    if (! parent_)
-      // the root command has no name
-      return "";
+    if (is_root())
+      return ""; // the root command has no name
     // we traverse from our position back to root, i.e., our name will
     // have the wrong order; we fix this by adding the reversed string for
     // each parent and then reverse the whole resulting string in place
@@ -177,25 +176,48 @@ public:
   }
 
   /// Execute a command line.
-  command_result execute(const_iterator first, const_iterator last) const
+  command_result execute(std::string& err,
+                         const_iterator first,
+                         const_iterator last) const
   {
+    if (is_root() && first == last)
+    {
+      return nop;
+    }
     auto delim = std::find(first, last, ' ');
     for (auto& cmd : children_)
     {
       auto dist = static_cast<size_t>(std::distance(first, delim));
       auto& n = cmd->name();
       if (dist == n.size() && std::equal(first, delim, n.begin())) {
-        return cmd->execute(delim == last ? std::string{}
-                                          : std::string(delim + 1, last));
+        return cmd->execute(err, delim == last ? std::string{}
+                                               : std::string(delim + 1, last));
       }
     }
-    return handler_ ? handler_(first, last) : no_command;
+    if (! handler_)
+    {
+      err.clear();
+      err.insert(err.end(), first, delim);
+      err += ": command not found";
+      return no_command;
+    }
+    return handler_(err, first, last);
   }
 
   /// Execute a command line.
-  inline command_result execute(std::string const& line) const
+  inline command_result execute(std::string& err, std::string const& line) const
   {
-    return execute(line.begin(), line.end());
+    return execute(err, line.begin(), line.end());
+  }
+
+  inline bool is_root() const
+  {
+    return parent_ == nullptr;
+  }
+
+  inline std::string const& description() const
+  {
+    return description_;
   }
 
 private:

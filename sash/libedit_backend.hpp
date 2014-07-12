@@ -138,12 +138,12 @@ public:
     assert(hist != nullptr);
     minitrue(H_SETSIZE, history_size);
     minitrue(H_SETUNIQUE, unique_history ? 1 : 0);
-    load_history();
+    history_load();
   }
 
   inline ~libedit_backend()
   {
-    save_history();
+    history_save();
     el_end(el_);
   }
 
@@ -160,7 +160,7 @@ public:
   }
 
   /// Writes the history to file.
-  inline void save_history()
+  inline void history_save()
   {
     if (! history_filename_.empty())
     {
@@ -169,7 +169,7 @@ public:
   }
 
   /// Reads the history from file.
-  inline void load_history()
+  inline void history_load()
   {
     if (! history_filename_.empty())
     {
@@ -182,7 +182,7 @@ public:
   inline void history_add(std::string const& str)
   {
     minitrue(H_ADD, str.c_str());
-    save_history();
+    history_save();
   }
 
   /// Appends @p str to the last new element of the history.

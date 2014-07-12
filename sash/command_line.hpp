@@ -38,7 +38,7 @@ namespace sash {
 /// space-separated sub-commands. Each command has a description and a callback
 /// handler for arguments which themselves are not commands.
 /// @tparam Backend The CLI implementation, e.g., libedit.
-template<class Backend, class Command>
+template<class Backend, class Command, class Preprocessor>
 class command_line
 {
 public:
@@ -90,9 +90,49 @@ public:
   /// Processes a single command from the command line.
   /// @param cmd The command to process.
   /// @returns A valid result if the callback executed and an error on failure.
-  command_result process(std::string const& cmd)
+  template<class String>
+  command_result process(String&& cmd)
   {
-    return mode_stack_.empty() ? no_command : mode_stack_.back()->execute(cmd);
+    if (cmd.empty())
+    {
+      return nop;
+    }
+    if (mode_stack_.empty())
+    {
+      last_error_ = "command_line: mode stack is empty";
+      return no_command;
+    }
+    if (! preprocessors_.empty())
+    {
+      // We use two strings here for input and output. The next best
+      // alternative would be to move the input into the preprocessor
+      // and let it return a string. However, it's very likely that our
+      // preprocessor cannot perform its operation in place, meaning that
+      // it needs a temporary string. When chaining multiple preprocessors,
+      // this design would cause each preprocessor to allocate a new string
+      // and deallocate its input. With this design, we have only two string
+      // buffers that are re-used every time. It's uglier, but way
+      // more efficient.
+      last_error_.clear();
+      // Makes either a copy or a move, depending on the input parameter.
+      std::string in = std::forward<String>(cmd);
+      std::string out;
+      for (auto& p : preprocessors_)
+      {
+        p(last_error_, const_cast<const std::string&>(in), out);
+        if (! last_error_.empty())
+        {
+          return no_command;
+        }
+        if (out.empty())
+        {
+          return executed;
+        }
+        in.swap(out);
+      }
+      return mode_stack_.back()->execute(last_error_, in);
+    }
+    return mode_stack_.back()->execute(last_error_, cmd);
   }
 
   /// Removes an existing mode.
@@ -167,6 +207,34 @@ public:
     return true;
   }
 
+  inline std::string const& last_error() const
+  {
+    return last_error_;
+  }
+
+  /// Queries whether this command line has an active mode.
+  inline bool has_mode() const
+  {
+    return ! mode_stack_.empty();
+  }
+
+  /// Returns a reference to the currently active mode.
+  /// @pre has_mode()
+  mode_type& current_mode()
+  {
+    return *mode_stack_.back();
+  }
+
+  /// Adds a new preprocessor to the command line. Preprocessors
+  /// intercept any input line *before* it is being passed to the
+  /// currently active mode and can manipulate the string.
+  /// For example, a preprocessor can be used to add an engine for
+  /// builtin commands or to provide variables.
+  void add_preprocessor(Preprocessor preproc)
+  {
+    preprocessors_.emplace_back(std::move(preproc));
+  }
+
 private:
   // get the current backend or nullptr if mode stack is empty
   Backend* current_backend()
@@ -177,7 +245,8 @@ private:
   std::vector<std::shared_ptr<mode_type>> mode_stack_;
   std::map<std::string, std::shared_ptr<mode_type>> modes_;
   backend_ptr backend_;
-
+  std::string last_error_;
+  std::vector<Preprocessor> preprocessors_;
 };
 
 } // namespace sash

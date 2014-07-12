@@ -19,6 +19,7 @@
 #ifndef SASH_MODE_HPP
 #define SASH_MODE_HPP
 
+#include <tuple>
 #include <memory>
 #include <string>
 
@@ -68,13 +69,39 @@ public:
     el_.set_prompt(std::move(prompt), prompt_color);
   }
 
-  /// Adds a sub-command to this command.
+  /// Adds a sub-command to this mode.
   /// @param name The name of the command.
   /// @param desc A one-line description of the command.
   /// @returns If successful, a valid pointer to the newly created command.
   command_ptr add(std::string name, std::string desc)
   {
     return root_->add(std::move(name), std::move(desc));
+  }
+
+  /// Adds a sub-command with handler to this mode.
+  /// @param name The name of the command.
+  /// @param desc A one-line description of the command.
+  /// @param func A functor to handle the new command.
+  /// @returns If successful, a valid pointer to the newly created command.
+  template<typename F>
+  command_ptr add(std::string name, std::string desc, F func)
+  {
+    auto ptr = root_->add(std::move(name), std::move(desc));
+    if (ptr)
+    {
+      ptr->on(std::move(func));
+    }
+    return ptr;
+  }
+
+  using cmd_clause = std::tuple<std::string, std::string, command_cb>;
+
+  void add_all(std::vector<cmd_clause> clauses)
+  {
+    for (auto& clause : clauses)
+    {
+      add(std::get<0>(clause), std::get<1>(clause), std::get<2>(clause));
+    }
   }
 
   /// Assigns a callback handler for unknown commands.
@@ -106,9 +133,9 @@ public:
   }
 
   /// Execute a command line.
-  command_result execute(std::string const& line) const
+  command_result execute(std::string& err, std::string const& line) const
   {
-    return root_->execute(line);
+    return root_->execute(err, line);
   }
 
   /// Retrieves the name of this mode.

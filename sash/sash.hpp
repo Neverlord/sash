@@ -37,14 +37,21 @@ using completion_cb = std::function<std::string (std::string const&,
                                                  std::vector<std::string>)>;
 
 /// The default type for command callbacks.
-using command_cb = std::function<command_result (std::string::const_iterator,
+using command_cb = std::function<command_result (std::string&,
+                                                 std::string::const_iterator,
                                                  std::string::const_iterator)>;
+
+/// The default type for preprocessors.
+using preprocessor_fun = std::function<void (std::string&,
+                                             const std::string&,
+                                             std::string&)>;
 
 /// Utility class that fuses all types together and provides
 /// a typedef @p type for the actual CLI we want.
 template<template<class> class Backend,
          class CompletionCallback = completion_cb,
-         class CommandCallback = command_cb>
+         class CommandCallback = command_cb,
+         class Preprocessor = preprocessor_fun>
 struct sash
 {
   /// The type of our completion context.
@@ -57,7 +64,7 @@ struct sash
   using command_type = command<completer_type, command_cb>;
 
   /// The type of our CLI.
-  using type = command_line<backend_type, command_type>;
+  using type = command_line<backend_type, command_type, preprocessor_fun>;
 };
 
 } // namespace sash
