@@ -90,8 +90,7 @@ public:
   /// Processes a single command from the command line.
   /// @param cmd The command to process.
   /// @returns A valid result if the callback executed and an error on failure.
-  template<class String>
-  command_result process(String&& cmd)
+  command_result process(std::string const& cmd)
   {
     if (cmd.empty())
       return nop;
@@ -112,8 +111,7 @@ public:
     // buffers that are re-used every time. It's uglier, but way
     // more efficient.
     last_error_.clear();
-    // Makes either a copy or a move, depending on the input parameter.
-    std::string in = std::forward<String>(cmd);
+    std::string in = cmd;
     std::string out;
     for (auto& p : preprocessors_)
     {
