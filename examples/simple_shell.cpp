@@ -67,7 +67,10 @@ int main()
         cli.append_to_history(line);
         break;
       case sash::no_command:
-        cout << cli.last_error() << endl;
+        cout << sash::color::red
+             << cli.last_error()
+             << sash::color::reset
+             << endl;
         break;
     }
   }
