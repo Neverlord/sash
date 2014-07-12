@@ -93,9 +93,7 @@ public:
   command_result process(std::string const& cmd)
   {
     if (mode_stack_.empty())
-    {
       return no_command_handler_found;
-    }
     return mode_stack_.back()->execute(cmd);
   }
 
@@ -114,24 +112,20 @@ public:
   {
     auto last = modes_.end();
     auto i = modes_.find(mode);
-    if (i != last)
-    {
-      mode_stack_.emplace_back(i->second);
-      return true;
-    }
-    return false;
+    if (i == last)
+      return false;
+    mode_stack_.emplace_back(i->second);
+    return true;
   }
 
   /// Leaves the current mode.
   /// @returns The number of modes left on the stack.
   size_t mode_pop()
   {
-    if (! mode_stack_.empty())
-    {
-      mode_stack_.pop_back();
-      return true;
-    }
-    return false;
+    if (mode_stack_.empty())
+      return false;
+    mode_stack_.pop_back();
+    return true;
   }
 
   /// Appends an entry to the history of the current mode.
@@ -140,13 +134,11 @@ public:
   bool append_to_history(std::string const& entry)
   {
     auto bptr = current_backend();
-    if (bptr != nullptr)
-    {
-      bptr->history_enter(entry);
-      bptr->history_save();
-      return true;
-    }
-    return false;
+    if (bptr == nullptr)
+      return false;
+    bptr->history_enter(entry);
+    bptr->history_save();
+    return true;
   }
 
   /// Retrieves a single character from the command line in a blocking fashion.
@@ -165,20 +157,16 @@ public:
   {
     auto bptr = current_backend();
     if (! bptr)
-    {
       return false;
-    }
     // Fixes TTY weirdness which may occur when switching between modes.
     bptr->reset();
-    if (bptr->read_line(line))
-    {
-      // Trim line from leading/trailing whitespace.
-      auto not_space = [](char c) { return !isspace(c); };
-      line.erase(line.begin(), find_if(line.begin(), line.end(), not_space));
-      line.erase(find_if(line.rbegin(), line.rend(), not_space).base(), line.end());
-      return true;
-    }
-    return false;
+    if (! bptr->read_line(line))
+      return false;
+    // Trim line from leading/trailing whitespace.
+    auto not_space = [](char c) { return !isspace(c); };
+    line.erase(line.begin(), find_if(line.begin(), line.end(), not_space));
+    line.erase(find_if(line.rbegin(), line.rend(), not_space).base(), line.end());
+    return true;
   }
 
 private:

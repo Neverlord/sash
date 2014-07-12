@@ -44,7 +44,7 @@ enum command_result
 /// A representation of command with zero or more arguments.
 /// @tparam Completer The type of our completion context.
 /// @tparam CommandCallback A functor providing the signature
-/// <tt>command_result (string::iterator, string::iterator)</tt>. The
+/// `command_result (string::iterator, string::iterator)`. The
 /// callback is invoked whenever a command is executed. The first iterator
 /// points to the first input character, the second iterator to the end
 /// of the string.
@@ -96,8 +96,6 @@ public:
     //       The way to paradise
     //       For another bloody crime
     //       I shall return
-    //
-    // ... if you don't get the reference: go listen to Blind Guardian! Now! :)
   }
 
   /// Adds a sub-command to this command.
@@ -138,10 +136,8 @@ public:
   std::string absolute_name() const
   {
     if (! parent_)
-    {
       // the root command has no name
       return "";
-    }
     // we traverse from our position back to root, i.e., our name will
     // have the wrong order; we fix this by adding the reversed string for
     // each parent and then reverse the whole resulting string in place
@@ -149,10 +145,7 @@ public:
     for (auto i = parent_; i != nullptr; i = i->parent_)
     {
       if (! result.empty())
-      {
-        // separate names with one white space
-        result += ' ';
-      }
+        result += ' '; // separate names with one white space
       result.insert(result.end(), i->name().rbegin(), i->name().rend());
     }
     assert(!result.empty());
@@ -165,26 +158,22 @@ public:
   /// @returns The help string for this command.
   std::string help(size_t indent = 0) const
   {
-      if (children_.empty())
-      {
-        return "";
-      }
-      auto binary_op = [](size_t old_max, pointer const& cmd)
-      {
-        return std::max(old_max, cmd->name().size());
-      };
-      size_t max_len = std::accumulate(children_.begin(), children_.end(),
-                                       size_t{0}, binary_op);
-      std::string padding(indent, ' ');
-      std::ostringstream oss;
-      oss << std::left;
-      for (auto& cmd : children_)
-      {
-        // always separate name & desciption by at least two spaces
-        oss << padding << std::setw(max_len) << cmd->name()
-            << "  " << cmd->description() << "\n";
-      }
-      return oss.str();
+    if (children_.empty())
+      return "";
+    auto binary_op = [](size_t old_max, pointer const& cmd)
+    {
+      return std::max(old_max, cmd->name().size());
+    };
+    size_t max_len = std::accumulate(children_.begin(), children_.end(),
+                                     size_t{0}, binary_op);
+    std::string padding(indent, ' ');
+    std::ostringstream oss;
+    oss << std::left;
+    for (auto& cmd : children_)
+      // always separate name & desciption by at least two spaces
+      oss << padding << std::setw(max_len) << cmd->name()
+          << "  " << cmd->description() << "\n";
+    return oss.str();
   }
 
   /// Execute a command line.
@@ -200,11 +189,7 @@ public:
                                           : std::string(delim + 1, last));
       }
     }
-    if (! handler_)
-    {
-      return no_command_handler_found;
-    }
-    return handler_(first, last);
+    return handler_ ? handler_(first, last) : no_command_handler_found;
   }
 
   /// Execute a command line.

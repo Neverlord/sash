@@ -47,17 +47,17 @@ template<template<class> class Backend,
          class CommandCallback = command_cb>
 struct sash
 {
-    /// The type of our completion context.
-    using completer_type = completer<CompletionCallback>;
+  /// The type of our completion context.
+  using completer_type = completer<CompletionCallback>;
 
-    /// The type of our backend.
-    using backend_type = Backend<completer_type>;
+  /// The type of our backend.
+  using backend_type = Backend<completer_type>;
 
-    /// The type of a command.
-    using command_type = command<completer_type, command_cb>;
+  /// The type of a command.
+  using command_type = command<completer_type, command_cb>;
 
-    /// The type of our CLI.
-    using type = command_line<backend_type, command_type>;
+  /// The type of our CLI.
+  using type = command_line<backend_type, command_type>;
 };
 
 } // namespace sash
