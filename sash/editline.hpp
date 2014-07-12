@@ -17,7 +17,7 @@ public:
 
   /// Constructs an editline context.
   /// @param The name of the edit line context.
-  editline(char const* name = "vast");
+  editline(char const* name = "sash");
 
   ~editline();
 

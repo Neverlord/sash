@@ -86,7 +86,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
-file(GLOB SASH_HDRS "sash/*.hpp" "sash/*.cc")
+file(GLOB SASH_HDRS "sash/*.hpp")
 
 message(STATUS "${SASH_HDRS}")
 
@@ -96,10 +96,11 @@ set(LD_FLAGS ${CMAKE_LD_LIBS})
 
 if (APPLE)
   # -pthread is ignored on MacOSX
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ledit")
 elseif (UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ledit")
 elseif (MINGW)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ledit")
   set(LD_FLAGS "ws2_32 -liphlpapi")
 endif ()
 

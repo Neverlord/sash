@@ -20,11 +20,11 @@
 #define SASH_BACKEND_HPP
 
 #include <string>
+#include <cassert>
 
 #include <histedit.h>
 
 #include "sash/color.hpp"
-#include "sash/completer.hpp"
 
 namespace sash {
 
@@ -34,12 +34,18 @@ template<class Completer>
 class libedit_backend
 {
 public:
-  inline libedit_backend(const char* shell_name,
-                 std::string comp_key = "\t",
-                 int history_size = 1000,
-                 bool unique_history = true,
-                 std::string history_filename = "")
+  /// A (smart) pointer to the completion context
+  using completer_pointer = std::shared_ptr<Completer>;
+
+  using completer_type = Completer;
+
+  libedit_backend(const char* shell_name,
+                  std::string history_filename = "",
+                  int history_size = 1000,
+                  bool unique_history = true,
+                  std::string completion_key = "\t")
    : history_filename_{std::move(history_filename)},
+     completer_{std::make_shared<Completer>()},
      eof_{false}
   {
     el_ = el_init(shell_name, stdin, stdout, stderr);
@@ -57,9 +63,10 @@ public:
       libedit_backend* self = nullptr;
       el_get(el, EL_CLIENTDATA, &self);
       assert(self != nullptr);
-      auto line = self->cursor_line();
+      std::string line;
+      self->get_cursor_line(line);
       std::string completed;
-      auto cres = self->completer_.complete(completed, line);
+      auto cres = self->completer_->complete(completed, line);
       if (cres != completion_successful)
       {
         return CC_REFRESH_BEEP;
@@ -68,7 +75,7 @@ public:
       return CC_REDISPLAY;
     };
     set(EL_ADDFN, "sash-complete", "SASH complete", ch_callback);
-    set(EL_BIND, completion_key_, "sash-complete", NULL);
+    set(EL_BIND, completion_key.c_str(), "sash-complete", NULL);
     // FIXME: this is a fix for folks that have "bind -v" in their .editrc.
     // Most of these also have "bind ^I rl_complete" in there to re-enable tab
     // completion, which "bind -v" somehow disabled. A better solution to
@@ -76,7 +83,7 @@ public:
     set(EL_ADDFN, "rl_complete", "default complete", ch_callback);
     // Let all character reads go through our custom handler so that we can
     // figure out when we receive EOF.
-    using char_read_handler = int (*)(char*);
+    using char_read_handler = int (*)(EditLine*, char*);
     char_read_handler cr_callback = [](EditLine* el, char* result) -> int
     {
       libedit_backend* self = nullptr;
@@ -86,9 +93,9 @@ public:
       el_get(el, EL_GETFP, 0, &input_file_handle);
       auto empty_line = [el]() -> bool
       {
-        auto info = el_line(el_);
+        auto info = el_line(el);
         return info->buffer == info->cursor && info->buffer == info->lastchar;
-      }
+      };
       for (;;)
       {
         errno = 0;
@@ -107,7 +114,7 @@ public:
           else
           {
             self->eof_ = true;
-            break;
+            return 0;
           }
         }
         else
@@ -122,7 +129,7 @@ public:
     using prompt_function = char* (*)(EditLine* el);
     prompt_function pf = [](EditLine* el) -> char*
     {
-      impl* self;
+      libedit_backend* self;
       el_get(el, EL_CLIENTDATA, &self);
       assert(self);
       return const_cast<char*>(self->cprompt());
@@ -148,7 +155,7 @@ public:
     return el_source(el_, filename) != -1;
   }
 
-  /// Resets libedit.
+  /// Resets the TTY and the parser.
   void reset()
   {
     el_reset(el_);
@@ -157,50 +164,76 @@ public:
   /// Writes the history to file.
   inline void save_history()
   {
-    if (! filename_.empty())
+    if (! history_filename_.empty())
     {
-      minitrue(H_SAVE, filename_.c_str());
+      minitrue(H_SAVE, history_filename_.c_str());
     }
   }
 
   /// Reads the history from file.
   inline void load_history()
   {
-    if (! filename_.empty())
+    if (! history_filename_.empty())
     {
-      minitrue(H_LOAD, filename_.c_str());
+      minitrue(H_LOAD, history_filename_.c_str());
     }
   }
 
-  /// Writes the history to file.
-  inline void add_to_history(std::string const& str)
+  /// Appends @p str to the current element of the history, or
+  /// behave like {@link enter_history} if there is no current element.
+  inline void history_add(std::string const& str)
   {
     minitrue(H_ADD, str.c_str());
     save_history();
   }
 
-  /// Appends to the histroy.
-  inline void append_to_history(std::string const& str)
+  /// Appends @p str to the last new element of the history.
+  inline void history_append(std::string const& str)
   {
     minitrue(H_APPEND, str.c_str());
   }
 
-  /// Enters the history.
-  inline void enter_history(std::string const& str)
+  /// Adds @p str as a new element to the history.
+  inline void history_enter(std::string const& str)
   {
     minitrue(H_ENTER, str.c_str());
   }
 
-  /// Returns a reference to the prompt string.
-  inline std::string& prompt()
+  /// Sets a (colored) string as prompt for the shell.
+  inline void set_prompt(std::string str, color::type strcolor = color::none)
+  {
+    prompt_.clear();
+    add_to_prompt(std::move(str), strcolor);
+  }
+
+  /// Appends a (colored) string to the prompt.
+  inline void add_to_prompt(std::string str, color::type strcolor = color::none)
+  {
+    if (! str.empty())
+    {
+      if (strcolor != color::none)
+      {
+        prompt_ += strcolor;
+        prompt_ += std::move(str);
+        prompt_ += color::reset;
+      }
+      else
+      {
+        prompt_ += std::move(str);
+      }
+    }
+  }
+
+  /// Returns the current prompt.
+  std::string const& prompt() const
   {
     return prompt_;
   }
 
-  /// Updates the prompt in the backend after changing the string.
-  inline void update_prompt()
+  /// Shortcut for <tt>prompt().c_str()</tt>.
+  const char* cprompt() const
   {
-    // nop
+    return prompt_.c_str();
   }
 
   /// Checks whether we've reached the end of file.
@@ -286,11 +319,16 @@ public:
     el_insertstr(el_, str.c_str());
   }
 
+  completer_pointer get_completer()
+  {
+      return completer_;
+  }
+
 private:
   // The Ministry of Truth. Its purpose is to
   // rewrite history over and over again...
   template<typename... Ts>
-  inline minitrue(int flag, Ts... args) {
+  inline void minitrue(int flag, Ts... args) {
     ::history(hist, &hist_event, flag, args...);
   }
 
@@ -301,7 +339,7 @@ private:
 
   template<typename... Ts>
   void set(int flag, Ts... args) {
-    set(flag, args...);
+    el_set(el_, flag, args...);
   }
 
   // RAII enabling of editline settings.
@@ -329,7 +367,7 @@ private:
   std::string history_filename_;
   std::string prompt_;
   std::string comp_key_;
-  completer completer_;
+  completer_pointer completer_;
   bool eof_;
 };
 

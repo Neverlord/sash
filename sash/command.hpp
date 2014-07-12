@@ -22,6 +22,10 @@
 #include <memory>
 #include <string>
 #include <sstream>
+#include <cassert>
+#include <numeric>
+#include <iomanip>
+#include <algorithm>
 
 #include "sash/completer.hpp"
 
@@ -38,21 +42,30 @@ enum command_result
 };
 
 /// A representation of command with zero or more arguments.
-template<class CompletionCallback, class ExecuteCallback>
-class command
+/// @tparam Completer The type of our completion context.
+/// @tparam CommandCallback A functor providing the signature
+/// <tt>command_result (string::iterator, string::iterator)</tt>. The
+/// callback is invoked whenever a command is executed. The first iterator
+/// points to the first input character, the second iterator to the end
+/// of the string.
+template<class Completer, class CommandCallback>
+class command : public std::enable_shared_from_this<command<Completer,
+                                                            CommandCallback>>
 {
   command(command const&) = delete; // you shall not pass
   command& operator=(command const&) = delete; // you neither
 
 public:
   /// An iterator to the command line input.
-  using iterator = std::string::iterator;
+  using const_iterator = std::string::const_iterator;
 
   /// A (smart) pointer to a command.
   using pointer = std::shared_ptr<command>;
 
   /// A (smart) pointer to the completion context
-  using completer_pointer = std::shared_ptr<completer<CompletionCallback>>;
+  using completer_pointer = std::shared_ptr<Completer>;
+
+  using callback_type = CommandCallback;
 
   /// Constructs a command.
   /// @param name The parent command.
@@ -60,7 +73,6 @@ public:
   /// @param name The name of the command.
   /// @param desc A one-line description of the command for the help.
   /// @pre `mode`
-  template<class CompletionCallback>
   command(pointer parent,
           completer_pointer comp,
           std::string name,
@@ -72,7 +84,7 @@ public:
   {
     if (parent_)
     {
-      completer_->complete(absolute_name() + ' ');
+      completer_->add_completion(absolute_name() + ' ');
     }
     // else: I am ROOT
     //       The only one
@@ -100,7 +112,8 @@ public:
     {
       return nullptr;
     }
-    children_.push_back(std::make_shared<command>(this, completer_,
+    children_.push_back(std::make_shared<command>(this->shared_from_this(),
+                                                  completer_,
                                                   std::move(name),
                                                   std::move(desc)));
     return children_.back();
@@ -108,7 +121,7 @@ public:
 
   /// Assigns a callback handler for arguments to this command.
   /// @param f The function to execute for the command arguments.
-  void on_execute(ExecuteCallback f)
+  void on_command(CommandCallback f)
   {
     handler_ = std::move(f);
   }
@@ -175,12 +188,14 @@ public:
   }
 
   /// Execute a command line.
-  command_result execute(iterator first, iterator last) const
+  command_result execute(const_iterator first, const_iterator last) const
   {
     auto delim = std::find(first, last, ' ');
     for (auto& cmd : children_)
     {
-      if (std::equal(cmd->name().begin(), cmd->name().end(), first, delim)) {
+      auto dist = static_cast<size_t>(std::distance(first, delim));
+      auto& n = cmd->name();
+      if (dist == n.size() && std::equal(first, delim, n.begin())) {
         return cmd->execute(delim == last ? std::string{}
                                           : std::string(delim + 1, last));
       }
@@ -204,7 +219,7 @@ private:
   std::vector<pointer> children_;
   std::string name_;
   std::string description_;
-  ExecuteCallback handler_;
+  CommandCallback handler_;
 };
 
 } // namespace sash

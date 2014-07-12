@@ -47,6 +47,8 @@ template<class CompletionCallback>
 class completer
 {
 public:
+    using callback_type = CompletionCallback;
+
     /// Adds a string to complete.
     /// @param str The string to complete.
     /// @returns `true` if *str* did not already exist.
