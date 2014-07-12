@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(sash C CXX)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # extract version from VERSION file
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
 string(REPLACE "." " " version_numbers ${VERSION})
@@ -16,7 +18,15 @@ if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
                         "initialize the build configuration.")
 endif ()
 
-set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+# process cmake_uninstall.cmake.in
+configure_file("${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
+               "${CMAKE_BINARY_DIR}/cmake/cmake_uninstall.cmake"
+               IMMEDIATE @ONLY)
+
+# add uninstall target
+add_custom_target(uninstall
+                  COMMAND ${CMAKE_COMMAND} -P
+                  ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 # set binary output path
 if ("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
@@ -31,7 +41,7 @@ endif ()
 # check for g++ >= 4.7 or clang++ > = 3.2
 try_run(ProgramResult
         CompilationSucceeded
-  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/get_compiler_version.cpp
+  ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp
         RUN_OUTPUT_VARIABLE CompilerVersion)
 if (NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
   message(FATAL_ERROR "Cannot determine compiler version")
@@ -48,9 +58,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion}.")
   endif ()
   if (NOT CXXFLAGS_PROVIDED)
-    message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
-                   "you can override this by defining CMAKE_CXX_FLAGS "
-                   "(see 'configure --help')")
+    #message(STATUS "NOTE: Automatically added -stdlib=libc++ flag, "
+    #               "you can override this by defining CMAKE_CXX_FLAGS "
+    #               "(see 'configure --help')")
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif ()
 else ()
@@ -82,39 +92,56 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif (CMAKE_CXX_FLAGS)
 
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
-file(GLOB SASH_HDRS "sash/*.hpp")
+file(GLOB SASH_HDRS "${CMAKE_SOURCE_DIR}/sash/*.hpp")
 
-message(STATUS "${SASH_HDRS}")
-
-set(INCLUDE_DIRS .)
-set(LD_DIRS)
-set(LD_FLAGS ${CMAKE_LD_LIBS})
+set(SASH_INCLUDE_DIRS .)
+set(SASH_LD_DIRS)
+set(SASH_LD_FLAGS ${CMAKE_LD_LIBS})
 
 if (APPLE)
   # -pthread is ignored on MacOSX
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ledit")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 elseif (UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ledit")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 elseif (MINGW)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ledit")
-  set(LD_FLAGS "ws2_32 -liphlpapi")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+  set(SASH_LD_FLAGS "ws2_32 -liphlpapi")
 endif ()
 
-link_directories(${LD_DIRS})
-include_directories(${INCLUDE_DIRS})
+include_directories(${SASH_INCLUDE_DIRS})
+link_directories(${SASH_LD_DIRS})
+
+set(sash_libraries ${CMAKE_DL_LIBS} ${PTHREAD_LIBRARIES})
+
+find_package(Editline)
+if (EDITLINE_FOUND)
+  set(SASH_HAVE_EDITLINE true)
+  set(sash_libraries ${sash_libraries} ${EDITLINE_LIBRARIES})
+  include_directories(${EDITLINE_INCLUDE_DIR})
+endif ()
+
+# check for doxygen and add custom "doc" target to Makefile
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+                 ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+                 @ONLY)
+  add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile
+                    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
+                    COMMENT "Generating API documentation with Doxygen"
+                    VERBATIM)
+endif (DOXYGEN_FOUND)
 
 add_custom_target(all_examples)
 
 macro(add name)
   add_executable(${name} examples/${name}.cpp ${ARGN} ${SASH_HDRS})
   if (${CMAKE_SYSTEM_NAME} MATCHES "Window")
-    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${PTHREAD_LIBRARIES} -lws2_32)
+    target_link_libraries(${name} ${sash_libraries} -lws2_32)
   else ()
-    target_link_libraries(${name} ${CMAKE_DL_LIBS} ${PTHREAD_LIBRARIES})
+    target_link_libraries(${name} ${sash_libraries})
   endif ()
   add_dependencies(${name} all_examples)
 endmacro()
@@ -124,46 +151,21 @@ add(simple_shell)
 # install includes
 install(DIRECTORY sash/ DESTINATION include/sash FILES_MATCHING PATTERN "*.hpp")
 
-# process cmake_uninstall.cmake.in
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-               IMMEDIATE @ONLY)
-
-# add uninstall target
-add_custom_target(uninstall
-                  COMMAND ${CMAKE_COMMAND} -P
-                  ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-# setting path to sash headers and libsash
-set (SASH_INCLUDE ${SASH_INCLUDE_PATH})
-
-# check for doxygen and add custom "doc" target to Makefile
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
-                 @ONLY)
-  add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${CMAKE_HOME_DIRECTORY}/Doxyfile
-                    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-                    COMMENT "Generating API documentation with Doxygen"
-                    VERBATIM)
-endif (DOXYGEN_FOUND)
-
-# done (print summary)
-message(STATUS
-        "\n====================|  Build Summary  |===================="
-        "\n"
-        "\nSASH version   :   ${LIBRARY_VERSION}"
-        "\n"
-        "\nBuild type:        ${CMAKE_BUILD_TYPE}"
-        "\n"
-        "\nCXX:               ${CMAKE_CXX_COMPILER}"
-        "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
-        "\nLD_DIRS:           ${LD_DIRS}"
-        "\nLIBRARIES:         ${LD_FLAGS}"
-        "\n"
-        "\nSource directory:  ${CMAKE_SOURCE_DIR}"
-        "\nBuild directory:   ${CMAKE_BINARY_DIR}"
-        "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
-        "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
-        "\n"
-        "\n===========================================================\n")
+message(
+  "====================|  Build Summary  |===================="
+  "\n"
+  "\nSASH version   :   ${VERSION}"
+  "\n"
+  "\nBuild type:        ${CMAKE_BUILD_TYPE}"
+  "\n"
+  "\nCXX:               ${CMAKE_CXX_COMPILER}"
+  "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
+  "\nLD_DIRS:           ${SASH_LD_DIRS}"
+  "\nLIBRARIES:         ${SASH_LD_FLAGS}"
+  "\n"
+  "\nSource directory:  ${CMAKE_SOURCE_DIR}"
+  "\nBuild directory:   ${CMAKE_BINARY_DIR}"
+  "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
+  "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
+  "\n"
+  "\n===========================================================\n")
