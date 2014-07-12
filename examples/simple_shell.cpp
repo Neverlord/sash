@@ -10,22 +10,22 @@ int main()
   cli.mode_push("default");
   bool done = false;
   mptr->add("quit", "terminates the whole thing")
-  ->on_command([&](char_iter, char_iter) -> sash::command_result {
+  ->on([&](char_iter, char_iter) -> sash::command_result {
       done = true;
-      return sash::command_succeeded;
+      return sash::executed;
   });
   while (!done)
   {
     cli.read_line(line);
     switch (cli.process(line))
     {
-      case sash::command_nop:
-        break;
-      case sash::command_succeeded:
-        break;
-      case sash::no_command_handler_found:
-        break;
       default:
+        break;
+      case sash::nop:
+        break;
+      case sash::executed:
+        break;
+      case sash::no_command:
         break;
     }
   }

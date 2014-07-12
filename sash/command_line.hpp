@@ -92,9 +92,7 @@ public:
   /// @returns A valid result if the callback executed and an error on failure.
   command_result process(std::string const& cmd)
   {
-    if (mode_stack_.empty())
-      return no_command_handler_found;
-    return mode_stack_.back()->execute(cmd);
+    return mode_stack_.empty() ? no_command : mode_stack_.back()->execute(cmd);
   }
 
   /// Removes an existing mode.

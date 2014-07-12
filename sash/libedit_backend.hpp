@@ -65,13 +65,11 @@ public:
       assert(self != nullptr);
       std::string line;
       self->get_cursor_line(line);
-      std::string completed;
-      auto cres = self->completer_->complete(completed, line);
-      if (cres != completion_successful)
-      {
+      std::string completed_line;
+      auto cres = self->completer_->complete(completed_line, line);
+      if (cres != completed)
         return CC_REFRESH_BEEP;
-      }
-      el_insertstr(el, completed.c_str());
+      el_insertstr(el, completed_line.c_str());
       return CC_REDISPLAY;
     };
     set(EL_ADDFN, "sash-complete", "SASH complete", ch_callback);

@@ -31,7 +31,6 @@ namespace sash {
 template<class Backend, class Command>
 class mode
 {
-
   mode(mode const&) = delete;
   mode& operator=(mode const&) = delete;
 
@@ -82,7 +81,7 @@ public:
   /// @param f The function to execute for unknown commands.
   void on_unknown_command(command_cb f)
   {
-    root_->on_command(std::move(f));
+    root_->on(std::move(f));
   }
 
   /// Assigns a callback handler for unknown commands.

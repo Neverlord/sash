@@ -30,9 +30,9 @@ namespace sash {
 /// (b) no completion handler could be found.
 enum completion_result
 {
-  completion_successful,
-  no_completion_found,
-  no_completion_handler_found
+  completed,
+  not_found,
+  no_completion
 };
 
 /// A completion context. This class is used as template parameter
@@ -94,15 +94,15 @@ public:
   completion_result complete(std::string& result,
                              std::string const& prefix) const {
     if (!callback_)
-      return no_completion_handler_found;
+      return no_completion;
     if (strings_.empty())
-      return no_completion_found;
+      return not_found;
     std::vector<std::string> matches;
     for (auto& str : strings_)
       if (str.compare(0, prefix.size(), prefix) == 0)
         matches.push_back(str);
     result = callback_(prefix, std::move(matches));
-    return completion_successful;
+    return completed;
   }
 
 private:

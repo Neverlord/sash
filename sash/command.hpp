@@ -36,9 +36,9 @@ namespace sash {
 /// or fail because no command handler was found.
 enum command_result
 {
-  command_succeeded,
-  command_nop,
-  no_command_handler_found
+  executed,
+  nop,
+  no_command
 };
 
 /// A representation of command with zero or more arguments.
@@ -119,7 +119,7 @@ public:
 
   /// Assigns a callback handler for arguments to this command.
   /// @param f The function to execute for the command arguments.
-  void on_command(CommandCallback f)
+  void on(CommandCallback f)
   {
     handler_ = std::move(f);
   }
@@ -189,7 +189,7 @@ public:
                                           : std::string(delim + 1, last));
       }
     }
-    return handler_ ? handler_(first, last) : no_command_handler_found;
+    return handler_ ? handler_(first, last) : no_command;
   }
 
   /// Execute a command line.
