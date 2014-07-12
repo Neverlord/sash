@@ -6,7 +6,7 @@ int main()
   using char_iter = std::string::const_iterator;
   sash::sash<sash::libedit_backend>::type cli;
   std::string line;
-  auto mptr = cli.mode_add("default", ">");
+  auto mptr = cli.mode_add("default", "> ");
   cli.mode_push("default");
   bool done = false;
   mptr->add("quit", "terminates the whole thing")
