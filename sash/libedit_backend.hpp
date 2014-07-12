@@ -43,7 +43,8 @@ public:
                   std::string history_filename = "",
                   int history_size = 1000,
                   bool unique_history = true,
-                  std::string completion_key = "\t")
+                  std::string completion_key = "\t",
+                  char const* editrc = nullptr)
    : history_filename_{std::move(history_filename)},
      completer_{std::make_shared<Completer>()},
      eof_{false}
@@ -139,6 +140,8 @@ public:
     minitrue(H_SETSIZE, history_size);
     minitrue(H_SETUNIQUE, unique_history ? 1 : 0);
     history_load();
+    // Source the editrc config.
+    source(editrc);
   }
 
   inline ~libedit_backend()
@@ -147,10 +150,13 @@ public:
     el_end(el_);
   }
 
-  /// Changes the source for libedit.
-  bool source(char const* filename)
+  /// Parses an editrc.
+  /// @param editrc The configuration file in *editrc* format. If `nullptr`,
+  /// looks in `$PWD/.editrc` and then `$HOME/.editrc`.
+  /// @returns `true` on successful parsing.
+  bool source(char const* editrc = nullptr)
   {
-    return el_source(el_, filename) != -1;
+    return el_source(el_, editrc) != -1;
   }
 
   /// Resets the TTY and the parser.
@@ -228,7 +234,7 @@ public:
     return prompt_;
   }
 
-  /// Shortcut for <tt>prompt().c_str()</tt>.
+  /// Shortcut for `prompt().c_str()`.
   const char* cprompt() const
   {
     return prompt_.c_str();
