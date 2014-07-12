@@ -126,7 +126,7 @@ public:
 
   /// Retrieves the name of this very command.
   /// @returns The name of this command.
-  inline std::string const& name() const
+  std::string const& name() const
   {
     return name_;
   }
@@ -181,41 +181,36 @@ public:
                          const_iterator last) const
   {
     if (is_root() && first == last)
-    {
       return nop;
-    }
     auto delim = std::find(first, last, ' ');
     for (auto& cmd : children_)
     {
       auto dist = static_cast<size_t>(std::distance(first, delim));
       auto& n = cmd->name();
-      if (dist == n.size() && std::equal(first, delim, n.begin())) {
+      if (dist == n.size() && std::equal(first, delim, n.begin()))
         return cmd->execute(err, delim == last ? std::string{}
                                                : std::string(delim + 1, last));
-      }
     }
-    if (! handler_)
-    {
-      err.clear();
-      err.insert(err.end(), first, delim);
-      err += ": command not found";
-      return no_command;
-    }
-    return handler_(err, first, last);
+    if (handler_)
+      return handler_(err, first, last);
+    err.clear();
+    err.insert(err.end(), first, delim);
+    err += ": command not found";
+    return no_command;
   }
 
   /// Execute a command line.
-  inline command_result execute(std::string& err, std::string const& line) const
+  command_result execute(std::string& err, std::string const& line) const
   {
     return execute(err, line.begin(), line.end());
   }
 
-  inline bool is_root() const
+  bool is_root() const
   {
     return parent_ == nullptr;
   }
 
-  inline std::string const& description() const
+  std::string const& description() const
   {
     return description_;
   }

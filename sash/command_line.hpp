@@ -94,45 +94,37 @@ public:
   command_result process(String&& cmd)
   {
     if (cmd.empty())
-    {
       return nop;
-    }
     if (mode_stack_.empty())
     {
       last_error_ = "command_line: mode stack is empty";
       return no_command;
     }
-    if (! preprocessors_.empty())
+    if (preprocessors_.empty())
+      return mode_stack_.back()->execute(last_error_, cmd);
+    // We use two strings here for input and output. The next best
+    // alternative would be to move the input into the preprocessor
+    // and let it return a string. However, it's very likely that our
+    // preprocessor cannot perform its operation in place, meaning that
+    // it needs a temporary string. When chaining multiple preprocessors,
+    // this design would cause each preprocessor to allocate a new string
+    // and deallocate its input. With this design, we have only two string
+    // buffers that are re-used every time. It's uglier, but way
+    // more efficient.
+    last_error_.clear();
+    // Makes either a copy or a move, depending on the input parameter.
+    std::string in = std::forward<String>(cmd);
+    std::string out;
+    for (auto& p : preprocessors_)
     {
-      // We use two strings here for input and output. The next best
-      // alternative would be to move the input into the preprocessor
-      // and let it return a string. However, it's very likely that our
-      // preprocessor cannot perform its operation in place, meaning that
-      // it needs a temporary string. When chaining multiple preprocessors,
-      // this design would cause each preprocessor to allocate a new string
-      // and deallocate its input. With this design, we have only two string
-      // buffers that are re-used every time. It's uglier, but way
-      // more efficient.
-      last_error_.clear();
-      // Makes either a copy or a move, depending on the input parameter.
-      std::string in = std::forward<String>(cmd);
-      std::string out;
-      for (auto& p : preprocessors_)
-      {
-        p(last_error_, const_cast<const std::string&>(in), out);
-        if (! last_error_.empty())
-        {
-          return no_command;
-        }
-        if (out.empty())
-        {
-          return executed;
-        }
-        in.swap(out);
-      }
-      return mode_stack_.back()->execute(last_error_, in);
+      p(last_error_, const_cast<const std::string&>(in), out);
+      if (! last_error_.empty())
+        return no_command;
+      if (out.empty())
+        return executed;
+      in.swap(out);
     }
-    return mode_stack_.back()->execute(last_error_, cmd);
+    return mode_stack_.back()->execute(last_error_, in);
   }
 
   /// Removes an existing mode.
@@ -203,17 +195,18 @@ public:
     // Trim line from leading/trailing whitespace.
     auto not_space = [](char c) { return !isspace(c); };
     line.erase(line.begin(), find_if(line.begin(), line.end(), not_space));
-    line.erase(find_if(line.rbegin(), line.rend(), not_space).base(), line.end());
+    line.erase(find_if(line.rbegin(), line.rend(), not_space).base(),
+               line.end());
     return true;
   }
 
-  inline std::string const& last_error() const
+  std::string const& last_error() const
   {
     return last_error_;
   }
 
   /// Queries whether this command line has an active mode.
-  inline bool has_mode() const
+  bool has_mode() const
   {
     return ! mode_stack_.empty();
   }
