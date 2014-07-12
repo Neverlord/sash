@@ -144,7 +144,7 @@ public:
     source(editrc);
   }
 
-  inline ~libedit_backend()
+  ~libedit_backend()
   {
     history_save();
     el_end(el_);
@@ -166,65 +166,60 @@ public:
   }
 
   /// Writes the history to file.
-  inline void history_save()
+  void history_save()
   {
     if (! history_filename_.empty())
-    {
       minitrue(H_SAVE, history_filename_.c_str());
-    }
   }
 
   /// Reads the history from file.
-  inline void history_load()
+  void history_load()
   {
     if (! history_filename_.empty())
-    {
       minitrue(H_LOAD, history_filename_.c_str());
-    }
   }
 
   /// Appends @p str to the current element of the history, or
   /// behave like {@link enter_history} if there is no current element.
-  inline void history_add(std::string const& str)
+  void history_add(std::string const& str)
   {
     minitrue(H_ADD, str.c_str());
     history_save();
   }
 
   /// Appends @p str to the last new element of the history.
-  inline void history_append(std::string const& str)
+  void history_append(std::string const& str)
   {
     minitrue(H_APPEND, str.c_str());
   }
 
   /// Adds @p str as a new element to the history.
-  inline void history_enter(std::string const& str)
+  void history_enter(std::string const& str)
   {
     minitrue(H_ENTER, str.c_str());
   }
 
   /// Sets a (colored) string as prompt for the shell.
-  inline void set_prompt(std::string str, color::type strcolor = color::none)
+  void set_prompt(std::string str, color::type strcolor = color::none)
   {
     prompt_.clear();
     add_to_prompt(std::move(str), strcolor);
   }
 
   /// Appends a (colored) string to the prompt.
-  inline void add_to_prompt(std::string str, color::type strcolor = color::none)
+  void add_to_prompt(std::string str, color::type strcolor = color::none)
   {
-    if (! str.empty())
+    if (str.empty())
+      return;
+    if (strcolor != color::none)
     {
-      if (strcolor != color::none)
-      {
-        prompt_ += strcolor;
-        prompt_ += std::move(str);
-        prompt_ += color::reset;
-      }
-      else
-      {
-        prompt_ += std::move(str);
-      }
+      prompt_ += strcolor;
+      prompt_ += std::move(str);
+      prompt_ += color::reset;
+    }
+    else
+    {
+      prompt_ += std::move(str);
     }
   }
 
@@ -235,7 +230,7 @@ public:
   }
 
   /// Checks whether we've reached the end of file.
-  inline bool eof() const
+  bool eof() const
   {
     return eof_;
   }
@@ -250,23 +245,17 @@ public:
   bool read_line(std::string& line)
   {
     if (eof())
-    {
       return false;
-    }
     line.clear();
     raii_set guard{el_, EL_PREP_TERM};
     int n;
     auto str = el_gets(el_, &n);
     if (n == -1 || eof())
-    {
       return false;
-    }
     if (str != nullptr)
     {
       while (n > 0 && (str[n - 1] == '\n' || str[n - 1] == '\r'))
-      {
         --n;
-      }
       line.assign(str, n);
     }
     return true;
@@ -319,24 +308,27 @@ public:
 
   completer_pointer get_completer()
   {
-      return completer_;
+    return completer_;
   }
 
 private:
   // The Ministry of Truth. Its purpose is to
   // rewrite history over and over again...
   template<typename... Ts>
-  inline void minitrue(int flag, Ts... args) {
+  void minitrue(int flag, Ts... args)
+  {
     ::history(hist, &hist_event, flag, args...);
   }
 
   template<typename... Ts>
-  void get(int flag, Ts... args) {
+  void get(int flag, Ts... args)
+  {
     el_get(el_, flag, args...);
   }
 
   template<typename... Ts>
-  void set(int flag, Ts... args) {
+  void set(int flag, Ts... args)
+  {
     el_set(el_, flag, args...);
   }
 
