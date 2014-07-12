@@ -131,7 +131,7 @@ public:
       libedit_backend* self;
       el_get(el, EL_CLIENTDATA, &self);
       assert(self);
-      return const_cast<char*>(self->cprompt());
+      return const_cast<char*>(self->prompt_.c_str());
     };
     set(EL_PROMPT, pf);
     // Setup for our history.
@@ -232,12 +232,6 @@ public:
   std::string const& prompt() const
   {
     return prompt_;
-  }
-
-  /// Shortcut for `prompt().c_str()`.
-  const char* cprompt() const
-  {
-    return prompt_.c_str();
   }
 
   /// Checks whether we've reached the end of file.
