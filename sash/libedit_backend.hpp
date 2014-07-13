@@ -49,7 +49,7 @@ public:
      completer_{std::make_shared<Completer>()},
      eof_{false}
   {
-    el_ = el_init(shell_name, stdin, stdout, stderr);
+    el_ = ::el_init(shell_name, stdin, stdout, stderr);
     assert(el_ != nullptr);
     // Make ourselves available in callbacks.
     set(EL_CLIENTDATA, this);
@@ -62,15 +62,15 @@ public:
     completion_handler ch_callback = [](EditLine* el, int) -> unsigned char
     {
       libedit_backend* self = nullptr;
-      el_get(el, EL_CLIENTDATA, &self);
+      ::el_get(el, EL_CLIENTDATA, &self);
       assert(self != nullptr);
+      assert(self->el_ == el);
       std::string line;
       self->get_cursor_line(line);
       std::string completed_line;
-      auto cres = self->completer_->complete(completed_line, line);
-      if (cres != completed)
+      if (self->completer_->complete(completed_line, line) != completed)
         return CC_REFRESH_BEEP;
-      el_insertstr(el, completed_line.c_str());
+      self->insert(completed_line);
       return CC_REDISPLAY;
     };
     set(EL_ADDFN, "sash-complete", "SASH complete", ch_callback);
@@ -86,13 +86,14 @@ public:
     char_read_handler cr_callback = [](EditLine* el, char* result) -> int
     {
       libedit_backend* self = nullptr;
-      el_get(el, EL_CLIENTDATA, &self);
-      assert(self);
+      ::el_get(el, EL_CLIENTDATA, &self);
+      assert(self != nullptr);
+      assert(self->el_ == el);
       FILE* input_file_handle = nullptr;
-      el_get(el, EL_GETFP, 0, &input_file_handle);
+      ::el_get(el, EL_GETFP, 0, &input_file_handle);
       auto empty_line = [el]() -> bool
       {
-        auto info = el_line(el);
+        auto info = ::el_line(el);
         return info->buffer == info->cursor && info->buffer == info->lastchar;
       };
       for (;;)
@@ -129,7 +130,7 @@ public:
     prompt_function pf = [](EditLine* el) -> char*
     {
       libedit_backend* self;
-      el_get(el, EL_CLIENTDATA, &self);
+      ::el_get(el, EL_CLIENTDATA, &self);
       assert(self);
       return const_cast<char*>(self->prompt_.c_str());
     };
@@ -149,7 +150,7 @@ public:
   {
     history_save();
     ::history_end(hist_);
-    el_end(el_);
+    ::el_end(el_);
   }
 
   /// Parses an editrc.
@@ -158,13 +159,13 @@ public:
   /// @returns `true` on successful parsing.
   bool source(char const* editrc = nullptr)
   {
-    return el_source(el_, editrc) != -1;
+    return ::el_source(el_, editrc) != -1;
   }
 
   /// Resets the TTY and the parser.
   void reset()
   {
-    el_reset(el_);
+    ::el_reset(el_);
   }
 
   /// Writes the history to file.
@@ -251,7 +252,7 @@ public:
     line.clear();
     raii_set guard{el_, EL_PREP_TERM};
     int n;
-    auto str = el_gets(el_, &n);
+    auto str = ::el_gets(el_, &n);
     if (n == -1 || eof())
       return false;
     if (str != nullptr)
@@ -265,7 +266,7 @@ public:
 
   void get_current_line(std::string& line)
   {
-    auto info = el_line(el_);
+    auto info = ::el_line(el_);
     line.assign(
         info->buffer,
         static_cast<std::string::size_type>(info->lastchar - info->buffer));
@@ -273,7 +274,7 @@ public:
 
   void get_cursor_line(std::string& line)
   {
-    auto info = el_line(el_);
+    auto info = ::el_line(el_);
     line.assign(
         info->buffer,
         static_cast<std::string::size_type>(info->cursor - info->buffer));
@@ -282,30 +283,30 @@ public:
   /// Returns the current cursor position.
   size_t cursor()
   {
-    auto info = el_line(el_);
+    auto info = ::el_line(el_);
     return info->cursor - info->buffer;
   }
 
   /// Resizes the shell.
   void resize()
   {
-    el_resize(el_);
+    ::el_resize(el_);
   }
 
   /// Rings a bell.
   void beep()
   {
-    el_beep(el_);
+    ::el_beep(el_);
   }
 
   void push(char const* str)
   {
-    el_push(el_, str);
+    ::el_push(el_, str);
   }
 
   void insert(std::string const& str)
   {
-    el_insertstr(el_, str.c_str());
+    ::el_insertstr(el_, str.c_str());
   }
 
   completer_pointer get_completer()
@@ -325,13 +326,13 @@ private:
   template<typename... Ts>
   void get(int flag, Ts... args)
   {
-    el_get(el_, flag, args...);
+    ::el_get(el_, flag, args...);
   }
 
   template<typename... Ts>
   void set(int flag, Ts... args)
   {
-    el_set(el_, flag, args...);
+    ::el_set(el_, flag, args...);
   }
 
   // RAII enabling of editline settings.
@@ -340,13 +341,13 @@ private:
     raii_set(EditLine* el, int flag)
       : el{el}, flag{flag}
     {
-      el_set(el, flag, 1);
+      ::el_set(el, flag, 1);
     }
 
     ~raii_set()
     {
       assert(el);
-      el_set(el, flag, 0);
+      ::el_set(el, flag, 0);
     }
 
     EditLine* el;
