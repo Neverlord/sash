@@ -99,7 +99,7 @@ public:
       for (;;)
       {
         errno = 0;
-        char ch = ::fgetc(stdin);
+        char ch = ::fgetc(input_file_handle);
         if (ch == '\x04' && empty_line())
         {
           errno = 0;
