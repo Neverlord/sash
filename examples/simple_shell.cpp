@@ -56,7 +56,8 @@ int main()
     }});
   while (!done)
   {
-    cli.read_line(line);
+    if (! cli.read_line(line))
+      break;
     switch (cli.process(line))
     {
       default:
