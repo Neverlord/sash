@@ -147,6 +147,7 @@ public:
   ~libedit_backend()
   {
     history_save();
+    ::history_end(hist);
     el_end(el_);
   }
 
