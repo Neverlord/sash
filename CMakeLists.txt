@@ -4,8 +4,8 @@ project(sash C CXX)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # extract version from VERSION file
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
-string(REPLACE "." " " version_numbers ${VERSION})
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" SASH_VERSION LIMIT_COUNT 1)
+string(REPLACE "." " " version_numbers ${SASH_VERSION})
 separate_arguments(version_numbers)
 list(GET version_numbers 0 SASH_VERSION_MAJOR)
 list(GET version_numbers 1 SASH_VERSION_MINOR)
@@ -20,7 +20,7 @@ endif ()
 
 # process cmake_uninstall.cmake.in
 configure_file("${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-               "${CMAKE_BINARY_DIR}/cmake/cmake_uninstall.cmake"
+               "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
                IMMEDIATE @ONLY)
 
 # add uninstall target
@@ -63,6 +63,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     #               "(see 'configure --help')")
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif ()
+  if (ENABLE_ADDRESS_SANITIZER)
+    set(CXX_FLAGS "${CXX_FLAGS} -fsanitize=address -g")
+  endif ()
 else ()
   message(FATAL_ERROR "Your C++ compiler does not support C++11 "
                       "or is not supported")
@@ -75,7 +78,7 @@ if (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_MINSIZEREL     "")
   set(CMAKE_CXX_FLAGS_RELEASE        "")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-else (CMAKE_CXX_FLAGS)
+else ()
   set(CXXFLAGS_PROVIDED false)
   if (MORE_CLANG_WARNINGS AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "-std=c++11 -pedantic -Weverything -Wno-c++98-compat -Wno-padded -Wno-documentation-unknown-command -Wno-exit-time-destructors -Wno-global-constructors -Wno-missing-prototypes -Wno-c++98-compat-pedantic -Wno-unused-member-function -Wno-unused-const-variable")
@@ -91,6 +94,15 @@ else (CMAKE_CXX_FLAGS)
   set(CMAKE_CXX_FLAGS_RELEASE        "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 endif (CMAKE_CXX_FLAGS)
+
+if (ENABLE_DEBUG)
+  set(CMAKE_BUILD_TYPE Debug)
+  set(CXX_FLAGS "${CXX_FLAGS} -DSASH_DEBUG")
+endif ()
+
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif ()
 
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
@@ -151,21 +163,38 @@ add(simple_shell)
 # install includes
 install(DIRECTORY sash/ DESTINATION include/sash FILES_MATCHING PATTERN "*.hpp")
 
+macro(display test desc summary)
+  if (${test})
+    set(${summary} ${desc})
+  else ()
+    set(${summary} no)
+  endif()
+endmacro()
+
+display(ENABLE_DEBUG yes debug_summary)
+display(DOXYGEN_FOUND yes doxygen_summary)
+display(EDITLINE_FOUND ${EDITLINE_INCLUDE_DIR} editline_summary)
+display(ENABLE_ADDRESS_SANITIZER yes asan_summary)
+
 message(
   "====================|  Build Summary  |===================="
   "\n"
-  "\nSASH version   :   ${VERSION}"
+  "\nVersion:              ${SASH_VERSION}"
   "\n"
-  "\nBuild type:        ${CMAKE_BUILD_TYPE}"
+  "\nDebug mode:           ${debug_summary}"
+  "\nBuild type:           ${CMAKE_BUILD_TYPE}"
+  "\nSource directory:     ${CMAKE_SOURCE_DIR}"
+  "\nBuild directory:      ${CMAKE_BINARY_DIR}"
+  "\nInstall prefix:       ${CMAKE_INSTALL_PREFIX}"
+  "\nExecutable path:      ${EXECUTABLE_OUTPUT_PATH}"
   "\n"
-  "\nCXX:               ${CMAKE_CXX_COMPILER}"
-  "\nCXXFLAGS:          ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
-  "\nLD_DIRS:           ${SASH_LD_DIRS}"
-  "\nLIBRARIES:         ${SASH_LD_FLAGS}"
+  "\nDoxygen:              ${doxygen_summary}"
+  "\nEditline:             ${editline_summary}"
   "\n"
-  "\nSource directory:  ${CMAKE_SOURCE_DIR}"
-  "\nBuild directory:   ${CMAKE_BINARY_DIR}"
-  "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
-  "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
+  "\nUse AddressSanitizer: ${asan_summary}"
+  "\n"
+  "\nCC:                   ${CMAKE_C_COMPILER}"
+  "\nCXX:                  ${CMAKE_CXX_COMPILER}"
+  "\nCXXFLAGS:             ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${build_type}}"
   "\n"
   "\n===========================================================\n")
