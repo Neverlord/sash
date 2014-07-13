@@ -137,6 +137,7 @@ public:
     // Setup for our history.
     hist_ = ::history_init();
     assert(hist_ != nullptr);
+    set(EL_HIST, ::history, hist_);
     minitrue(H_SETSIZE, history_size);
     minitrue(H_SETUNIQUE, unique_history ? 1 : 0);
     history_load();
