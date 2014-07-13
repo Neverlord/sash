@@ -135,8 +135,8 @@ public:
     };
     set(EL_PROMPT, pf);
     // Setup for our history.
-    hist = ::history_init();
-    assert(hist != nullptr);
+    hist_ = ::history_init();
+    assert(hist_ != nullptr);
     minitrue(H_SETSIZE, history_size);
     minitrue(H_SETUNIQUE, unique_history ? 1 : 0);
     history_load();
@@ -147,7 +147,7 @@ public:
   ~libedit_backend()
   {
     history_save();
-    ::history_end(hist);
+    ::history_end(hist_);
     el_end(el_);
   }
 
@@ -318,7 +318,7 @@ private:
   template<typename... Ts>
   void minitrue(int flag, Ts... args)
   {
-    ::history(hist, &hist_event, flag, args...);
+    ::history(hist_, &hist_event_, flag, args...);
   }
 
   template<typename... Ts>
@@ -353,8 +353,8 @@ private:
   };
 
   EditLine* el_;
-  History* hist;
-  HistEvent hist_event;
+  History* hist_;
+  HistEvent hist_event_;
   std::string history_filename_;
   std::string prompt_;
   std::string comp_key_;
