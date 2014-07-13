@@ -61,12 +61,12 @@ public:
        char const* prompt_color = color::none,
        char const* shell_name = "sash",
        char const* completion_key = "\t")
-    : el_{shell_name, std::move(history_file),
+    : backend_{shell_name, std::move(history_file),
           history_size, unique_history, completion_key},
-      root_{std::make_shared<Command>(nullptr, el_.get_completer(),
+      root_{std::make_shared<Command>(nullptr, backend_.get_completer(),
                                       std::move(name), std::string{})}
   {
-    el_.set_prompt(std::move(prompt), prompt_color);
+    backend_.set_prompt(std::move(prompt), prompt_color);
   }
 
   /// Adds a sub-command to this mode.
@@ -88,9 +88,7 @@ public:
   {
     auto ptr = root_->add(std::move(name), std::move(desc));
     if (ptr)
-    {
       ptr->on(std::move(func));
-    }
     return ptr;
   }
 
@@ -99,9 +97,7 @@ public:
   void add_all(std::vector<cmd_clause> clauses)
   {
     for (auto& clause : clauses)
-    {
       add(std::get<0>(clause), std::get<1>(clause), std::get<2>(clause));
-    }
   }
 
   /// Assigns a callback handler for unknown commands.
@@ -115,21 +111,21 @@ public:
   /// @param f The function to execute for unknown commands.
   void on_complete(completion_cb f)
   {
-    el_.get_completer()->on_completion(std::move(f));
+    backend_.get_completer()->on_completion(std::move(f));
   }
 
   /// Registers a completion with this mode.
   /// @param The string to register.
   void add_completion(std::string str)
   {
-    el_.get_completer()->add_completion(std::move(str));
+    backend_.get_completer()->add_completion(std::move(str));
   }
 
   /// Replaces the completions associated with a set of new ones.
   /// @param completiosn The new completions.
   void replace_completions(std::vector<std::string> completions)
   {
-    el_.get_completer()->replace_completions(std::move(completions));
+    backend_.get_completer()->replace_completions(std::move(completions));
   }
 
   /// Execute a command line.
@@ -156,11 +152,11 @@ public:
   /// Returns a reference to the CLI backend used by this mode.
   Backend& backend()
   {
-    return el_;
+    return backend_;
   }
 
 private:
-  Backend el_;
+  Backend backend_;
   command_ptr root_;
 };
 
