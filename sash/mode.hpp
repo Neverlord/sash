@@ -96,8 +96,7 @@ public:
   // Wrong! The committeee once more delivered an epic failure by
   // making the constructor for std::tuple explicit! Meaning that
   // our preferred syntax add_all({{"a", "b", fun}, ...}) isn't doable.
-  // We work around this nonsene by using pairs... At least they don't
-  // have explicit constructors.
+  // We work around this nonsene by a struct.
   struct cmd_clause
   {
     std::string cmd_name;
@@ -105,6 +104,7 @@ public:
     command_cb  cmd_fun;
   };
 
+  /// Adds all sub comands from @p clause to this mode.
   void add_all(std::vector<cmd_clause> clauses)
   {
     for (auto& clause : clauses)
