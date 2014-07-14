@@ -12,8 +12,8 @@
  * Matthias Vallentin <vallentin (at) icir.org>                               *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
- * Distributed under the Boost Software License, Version 1.0. See             *
- * accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt  *
+ * Distributed under the 3-clause BSD License.                                *
+ * See accompanying file LICENSE.                                             *
 \******************************************************************************/
 
 #ifndef SASH_SASH_HPP

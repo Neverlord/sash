@@ -1,3 +1,21 @@
+/******************************************************************************
+ *                   ____     ______   ____     __  __                        *
+ *                  /\  _`\  /\  _  \ /\  _`\  /\ \/\ \                       *
+ *                  \ \,\L\_\\ \ \L\ \\ \,\L\_\\ \ \_\ \                      *
+ *                   \/_\__ \ \ \  __ \\/_\__ \ \ \  _  \                     *
+ *                     /\ \L\ \\ \ \/\ \ /\ \L\ \\ \ \ \ \                    *
+ *                     \ `\____\\ \_\ \_\\ `\____\\ \_\ \_\                   *
+ *                      \/_____/ \/_/\/_/ \/_____/ \/_/\/_/                   *
+ *                                                                            *
+ *                                                                            *
+ * Copyright (c) 2014                                                         *
+ * Matthias Vallentin <vallentin (at) icir.org>                               *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ *                                                                            *
+ * Distributed under the 3-clause BSD License.                                *
+ * See accompanying file LICENSE.                                             *
+\******************************************************************************/
+
 #include <iostream>
 
 #include "sash/sash.hpp"
