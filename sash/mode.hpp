@@ -92,12 +92,23 @@ public:
     return ptr;
   }
 
-  using cmd_clause = std::tuple<std::string, std::string, command_cb>;
+  // The natural thing to use here would be std::tuple, right?
+  // Wrong! The committeee once more delivered an epic failure by
+  // making the constructor for std::tuple explicit! Meaning that
+  // our preferred syntax add_all({{"a", "b", fun}, ...}) isn't doable.
+  // We work around this nonsene by using pairs... At least they don't
+  // have explicit constructors.
+  struct cmd_clause
+  {
+    std::string cmd_name;
+    std::string cmd_desc;
+    command_cb  cmd_fun;
+  };
 
   void add_all(std::vector<cmd_clause> clauses)
   {
     for (auto& clause : clauses)
-      add(std::get<0>(clause), std::get<1>(clause), std::get<2>(clause));
+      add(clause.cmd_name, clause.cmd_desc, clause.cmd_fun);
   }
 
   /// Assigns a callback handler for unknown commands.
