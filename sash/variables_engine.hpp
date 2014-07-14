@@ -202,7 +202,7 @@ public:
 private:
   struct raii_error_string
   {
-    raii_error_string(std::string& ref) : err{ref}
+    raii_error_string(std::string& ref) : err(ref)
     {
       // nop
     }
