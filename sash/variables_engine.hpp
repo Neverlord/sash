@@ -199,6 +199,13 @@ public:
     variables_.erase(identifier);
   }
 
+  /// Gets a content of a variable.
+  std::string get(const std::string& identifier)
+  {
+    auto i = variables_.find(identifier);
+    return i != variables_.end() ? i->second : std::string{};
+  }
+
   /// Factory function to create a std::function using this implementation.
   /// @param predef A set of predefined variables to initialize the engine.
   static functor create(Container predef = Container{})
