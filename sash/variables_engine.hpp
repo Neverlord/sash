@@ -187,6 +187,18 @@ public:
     flush();
   }
 
+  /// Sets a variable to given value.
+  void set(const std::string& identifier, std::string value)
+  {
+    variables_[identifier] = std::move(value);
+  }
+
+  /// Unsets a variable.
+  void unset(const std::string& identifier)
+  {
+    variables_.erase(identifier);
+  }
+
   /// Factory function to create a std::function using this implementation.
   /// @param predef A set of predefined variables to initialize the engine.
   static functor create(Container predef = Container{})
