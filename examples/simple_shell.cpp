@@ -32,7 +32,7 @@ int main()
   string line;
   auto mptr = cli.mode_add("default", "SASH> ", sash::color::blue);
   cli.mode_push("default");
-  cli.add_preprocessor(sash::variables_engine<>::create());
+  cli.add_preprocessor(sash::variables_engine<>::create_functor());
   bool done = false;
   mptr->add_all({
     {

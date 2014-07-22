@@ -21,6 +21,7 @@
 
 #include <map>
 #include <string>
+#include <memory>
 #include <iterator>
 #include <algorithm>
 
@@ -30,6 +31,7 @@ namespace sash {
 /// convertible to a std::function object.
 template<typename Container = std::map<std::string, std::string>>
 class variables_engine
+  : public std::enable_shared_from_this<variables_engine<Container>>
 {
 public:
   /// The type of a std::function wrapper.
@@ -206,16 +208,30 @@ public:
     return i != variables_.end() ? i->second : std::string{};
   }
 
-  /// Factory function to create a std::function using this implementation.
-  /// @param predef A set of predefined variables to initialize the engine.
-  static functor create(Container predef = Container{})
+  /// Create a std::function from this implementation.
+  functor as_functor()
   {
-    auto ptr = std::make_shared<variables_engine>();
-    ptr->variables_ = std::move(predef);
+    auto ptr = this->shared_from_this();
     return [ptr](std::string& err, const std::string& in, std::string& out)
     {
       ptr->parse(err, in, out);
     };
+  }
+
+  /// Factory function to create a std::function using this implementation.
+  /// @param predef A set of predefined variables to initialize the engine.
+  static std::shared_ptr<variables_engine> create(Container predef = Container{})
+  {
+    auto ptr = std::make_shared<variables_engine>();
+    ptr->variables_ = std::move(predef);
+    return ptr;
+  }
+
+  /// Factory function to create a std::function using this implementation.
+  /// @param predef A set of predefined variables to initialize the engine.
+  static functor create_functor(Container predef = Container{})
+  {
+    return create(std::move(predef))->as_functor();
   }
 
 private:
