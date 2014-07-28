@@ -30,7 +30,7 @@ int main()
   using sash::command_result;
   sash::sash<sash::libedit_backend>::type cli;
   string line;
-  auto mptr = cli.mode_add("default", "SASH> ", sash::color::blue);
+  auto mptr = cli.mode_add("default", "SASH> ");
   cli.mode_push("default");
   cli.add_preprocessor(sash::variables_engine<>::create_functor());
   bool done = false;
@@ -72,10 +72,8 @@ int main()
         return sash::no_command;
       }
     }});
-  while (!done)
+  while (!done && cli.read_line(line))
   {
-    if (! cli.read_line(line))
-      break;
     switch (cli.process(line))
     {
       default:
@@ -86,10 +84,8 @@ int main()
         cli.append_to_history(line);
         break;
       case sash::no_command:
-        cout << sash::color::red
-             << cli.last_error()
-             << sash::color::reset
-             << endl;
+        cli.append_to_history(line);
+        cout << cli.last_error() << endl;
         break;
     }
   }
