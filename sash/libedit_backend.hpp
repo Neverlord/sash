@@ -54,9 +54,7 @@ public:
     // Make ourselves available in callbacks.
     set(EL_CLIENTDATA, this);
     // Keyboard defaults.
-    set(EL_EDITOR, "vi");
-    set(EL_BIND, "^r", "em-inc-search-prev", NULL);
-    set(EL_BIND, "^w", "ed-delete-prev-word", NULL);
+    set(EL_EDITOR, "emacs");
     // Setup completion.
     using completion_handler = unsigned char (*)(EditLine*, int);
     completion_handler ch_callback = [](EditLine* el, int) -> unsigned char
