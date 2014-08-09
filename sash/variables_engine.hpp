@@ -137,7 +137,8 @@ public:
               // our value can in turn have variables
               parse(err, val_input, value, true);
               if (err.empty())
-                variables_.emplace(std::move(key), std::move(value));
+                variables_.insert(std::make_pair(std::move(key),
+                                                 std::move(value)));
               return;
           }
           break;
