@@ -203,6 +203,12 @@ public:
     return last_error_;
   }
 
+  template <class T>
+  void set_error(T&& str)
+  {
+    last_error_ = std::forward<T>(str);
+  }
+
   /// Queries whether this command line has an active mode.
   bool has_mode() const
   {
