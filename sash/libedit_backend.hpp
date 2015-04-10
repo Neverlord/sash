@@ -97,7 +97,7 @@ public:
       for (;;)
       {
         errno = 0;
-        char ch = ::fgetc(input_file_handle);
+        auto ch = static_cast<char>(::fgetc(input_file_handle));
         if (ch == '\x04' && empty_line())
         {
           errno = 0;
@@ -337,19 +337,19 @@ private:
   struct raii_set
   {
     raii_set(EditLine* el, int flag)
-      : el{el}, flag{flag}
+      : el_{el}, flag_{flag}
     {
       ::el_set(el, flag, 1);
     }
 
     ~raii_set()
     {
-      assert(el);
-      ::el_set(el, flag, 0);
+      assert(el_);
+      ::el_set(el_, flag_, 0);
     }
 
-    EditLine* el;
-    int flag;
+    EditLine* el_;
+    int flag_;
   };
 
   EditLine* el_;
