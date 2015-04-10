@@ -126,14 +126,14 @@ public:
   }
 
   /// Registers a completion with this mode.
-  /// @param The string to register.
+  /// @param str The string to register.
   void add_completion(std::string str)
   {
     backend_.get_completer()->add_completion(std::move(str));
   }
 
   /// Replaces the completions associated with a set of new ones.
-  /// @param completiosn The new completions.
+  /// @param completions The new completions.
   void replace_completions(std::vector<std::string> completions)
   {
     backend_.get_completer()->replace_completions(std::move(completions));

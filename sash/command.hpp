@@ -68,7 +68,6 @@ public:
   using callback_type = CommandCallback;
 
   /// Constructs a command.
-  /// @param name The parent command.
   /// @param comp The completion context this command exists in.
   /// @param name The name of the command.
   /// @param desc A one-line description of the command for the help.
