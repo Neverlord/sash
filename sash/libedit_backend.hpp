@@ -257,7 +257,7 @@ public:
     {
       while (n > 0 && (str[n - 1] == '\n' || str[n - 1] == '\r'))
         --n;
-      line.assign(str, n);
+      line.assign(str, static_cast<size_t>(n));
     }
     return true;
   }

@@ -169,7 +169,7 @@ public:
     oss << std::left;
     for (auto& cmd : children_)
       // always separate name & desciption by at least two spaces
-      oss << padding << std::setw(max_len) << cmd->name()
+      oss << padding << std::setw(static_cast<int>(max_len)) << cmd->name()
           << "  " << cmd->description() << "\n";
     return oss.str();
   }
