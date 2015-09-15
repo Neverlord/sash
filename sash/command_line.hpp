@@ -57,15 +57,10 @@ public:
 
   /// Creates a new mode for a set of related commands. Only one mode can
   /// be active at a time. Each mode has its own history.
-  ///
   /// @param name The name of the mode.
-  ///
   /// @param prompt The prompt of the mode.
-  ///
   /// @param prompt_color The color of *prompt*.
-  ///
   /// @param history_file The filename of the history.
-  ///
   /// @returns A valid pointer to the new mode on success.
   mode_ptr mode_add(std::string name,
                     std::string prompt,

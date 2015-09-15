@@ -48,6 +48,8 @@ public:
   /// A callback for commands.
   using command_cb = typename Command::callback_type;
 
+  using mode_ptr = std::shared_ptr<mode>;
+
   /// Constructs a mode.
   /// @param name The name of the mode.
   /// @param prompt The prompt string.
@@ -90,6 +92,11 @@ public:
     if (ptr)
       ptr->on(std::move(func));
     return ptr;
+  }
+
+  void add(std::vector<command_ptr> commands) {
+    for (auto& cmd : commands)
+      root_->add_copy(cmd);
   }
 
   // The natural thing to use here would be std::tuple, right?
@@ -142,7 +149,12 @@ public:
   /// Execute a command line.
   command_result execute(std::string& err, std::string const& line) const
   {
-    return root_->execute(err, line);
+    auto result = root_->execute(err, line);
+    if (result == command_result::no_command && parent_ != nullptr) {
+      err.clear();
+      result = parent_->root_->execute(err, line);
+    }
+    return result;
   }
 
   /// Retrieves the name of this mode.
@@ -157,7 +169,9 @@ public:
   /// @returns The help string for this mode.
   std::string help(size_t indent = 0) const
   {
-    return root_->help(indent);
+    if (! parent_)
+      return root_->help(indent);
+    return root_->help(indent) + parent_->root_->help(indent);
   }
 
   /// Returns a reference to the CLI backend used by this mode.
@@ -166,9 +180,56 @@ public:
     return backend_;
   }
 
+  const command_ptr& root_command() const {
+    return root_;
+  }
+
+  const mode_ptr& parent_mode() const {
+    return parent_;
+  }
+
+  std::vector<command_ptr> commands() const {
+    std::vector<command_ptr> result;
+    foreach_command([&](const command_ptr& cmd) { result.push_back(cmd); });
+    return result;
+  }
+
+  void parent(mode_ptr ptr) {
+    parent_.swap(ptr);
+  }
+
+  const mode_ptr& parent() const {
+    return parent_;
+  }
+
+  template <class F>
+  void foreach_command(F fun) const {
+    foreach_command(fun, root_);
+  }
+
 private:
+  template <class F>
+  static void foreach_command(F& fun, const command_ptr& cmd) {
+    if (cmd->is_leaf())
+      fun(cmd);
+    else
+      for (auto& child : cmd->children())
+        foreach_command(fun, child);
+  }
+
+
+  static void fill_recursive(std::vector<command_ptr>& res,
+                             const command_ptr& cmd) {
+    if (cmd->is_leaf())
+      res.push_back(cmd);
+    else
+      for (auto& child : cmd->children())
+        fill_recursive(res, child);
+  }
+
   Backend backend_;
   command_ptr root_;
+  mode_ptr parent_;
 };
 
 } // namespace sash

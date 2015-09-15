@@ -116,6 +116,13 @@ public:
     return children_.back();
   }
 
+  pointer add_copy(pointer cmd) {
+    auto cpy = add(cmd->name(), cmd->description());
+    if (cpy)
+      cpy->on(cmd->handler_);
+    return cpy;
+  }
+
   /// Assigns a callback handler for arguments to this command.
   /// @param f The function to execute for the command arguments.
   void on(CommandCallback f)
@@ -139,7 +146,7 @@ public:
     // we traverse from our position back to root, i.e., our name will
     // have the wrong order; we fix this by adding the reversed string for
     // each parent and then reverse the whole resulting string in place
-    std::string result;
+    std::string result(name_.rbegin(), name_.rend());
     for (auto i = parent_; i != nullptr; i = i->parent_)
     {
       if (! result.empty())
@@ -209,9 +216,18 @@ public:
     return parent_ == nullptr;
   }
 
+  bool is_leaf() const
+  {
+    return children_.empty();
+  }
+
   std::string const& description() const
   {
     return description_;
+  }
+
+  const std::vector<pointer>& children() const {
+    return children_;
   }
 
 private:
