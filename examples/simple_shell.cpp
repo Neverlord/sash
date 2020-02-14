@@ -44,7 +44,7 @@ int main()
           done = true;
           return sash::executed;
         }
-        err = "quit: to many arguments (none expected)";
+        err = "quit: too many arguments (none expected)";
         return sash::no_command;
       }
     },
